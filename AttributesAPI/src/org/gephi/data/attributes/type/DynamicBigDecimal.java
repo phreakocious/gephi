@@ -20,6 +20,9 @@ along with Gephi.  If not, see <http://www.gnu.org/licenses/>.
 */
 package org.gephi.data.attributes.type;
 
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Hashtable;
@@ -190,4 +193,5 @@ public final class DynamicBigDecimal extends DynamicType<BigDecimal> {
 	public Class getUnderlyingType() {
 		return BigDecimal.class;
 	}
+
 }
