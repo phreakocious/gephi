@@ -49,7 +49,7 @@ public class AttributeColumnImpl implements AttributeColumn {
         this.title = title;
         this.origin = origin;
         this.attributeValueDelegateProvider = attributeValueDelegateProvider;
-        this.defaultValue = new AttributeValueImpl(this, defaultValue);
+        this.defaultValue = (AttributeValueImpl)table.getFactory().newValue(this, defaultValue);
     }
 
     public AttributeTableImpl getTable() {
