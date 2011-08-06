@@ -25,9 +25,9 @@ import java.util.List;
 import org.gephi.data.attributes.api.AttributeColumn;
 import org.gephi.data.attributes.api.AttributeEvent;
 import org.gephi.data.attributes.api.AttributeListener;
+import org.gephi.data.attributes.api.AttributeRow;
 import org.gephi.data.attributes.api.AttributeType;
 import org.gephi.data.attributes.api.AttributeValue;
-import org.gephi.data.attributes.event.AttributeEventManager;
 import org.gephi.data.attributes.model.IndexedAttributeModel;
 import org.junit.Test;
 import org.openide.util.Exceptions;
@@ -61,8 +61,8 @@ public class EventsTest {
         //Add Column
         AttributeColumnImpl col = table.addColumn("test", AttributeType.DOUBLE);
 
-        AttributeRowImpl r1 = attModel.getFactory().newRowForTable("table", 1.0);
-        AttributeRowImpl r2 = attModel.getFactory().newRowForTable("table", 1.0);
+        AttributeRow r1 = attModel.getFactory().newRowForTable("table", 1.0);
+        AttributeRow r2 = attModel.getFactory().newRowForTable("table", 1.0);
 
         for(int i=0;i<1000000;i++) {
             r1.setValue(col.getIndex(), Math.random());
@@ -106,8 +106,8 @@ public class EventsTest {
                 return "o2";
             }
         };
-        AttributeRowImpl r1 = attModel.getFactory().newRowForTable("table", o1);
-        AttributeRowImpl r2 = attModel.getFactory().newRowForTable("table", o2);
+        AttributeRow r1 = attModel.getFactory().newRowForTable("table", o1);
+        AttributeRow r2 = attModel.getFactory().newRowForTable("table", o2);
 
         //Set values
         r1.setValue(col, "value 1");
