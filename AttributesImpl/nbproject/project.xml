@@ -63,7 +63,14 @@
                     </run-dependency>
                 </dependency>
             </module-dependencies>
-            <public-packages/>
+            <test-dependencies>
+                <test-type>
+                    <name>unit</name>
+                </test-type>
+            </test-dependencies>
+            <public-packages>
+                <package>org.gephi.data.attributes.spi</package>
+            </public-packages>
         </data>
     </configuration>
 </project>
