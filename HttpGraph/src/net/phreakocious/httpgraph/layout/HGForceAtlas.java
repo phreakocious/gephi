@@ -14,11 +14,11 @@ public class HGForceAtlas extends ForceAtlas {
 
     @Override
     public ForceAtlasLayout buildLayout() {
-        
+
         ForceAtlasLayout fal = new ForceAtlasLayout(this);
         fal.resetPropertiesValues();
         fal.setRepulsionStrength((double) 600);
-        
+
         return fal;
     }
 }

@@ -14,6 +14,31 @@ public class SnarfData {
 
     private static final Logger log = Logger.getLogger(SnarfData.class.getName());
     private static HashMap<String, String> attribtypes = new HashMap<String, String>();
+    private String clientaddr, domain, host, uri;
+    private int bytes = 0;
+    private HashMap<String, SDNode> nodes = new HashMap<String, SDNode>();
+    private ArrayList<SDEdge> edges = new ArrayList<SDEdge>();
+
+    public SnarfData(String xsrcaddr, String xuri, String xmethod, String xhost, String xreferer) {
+        setClient(xsrcaddr);
+        setHost(xhost);
+        setUri(xuri);
+        setReferer(xreferer);
+        String method = xmethod;
+        //explodeUri(nodes.get("uri"));
+        //explodeUri(nodes.get("referer"));
+
+        for (String n : new String[]{"referer", "rhost", "rdomain", "host", "domain", "client"}) {
+            nodes.get(n).attributes.put("content-type", "");
+        }
+
+        addEdge("rdomain", "rhost");
+        addEdge("rhost", "referer");
+        addEdge("referer", "uri");
+        addEdge("client", "uri");
+        addEdge("host", "uri");
+        addEdge("domain", "host");
+    }
 
     public class SDNode {
 
@@ -56,35 +81,10 @@ public class SnarfData {
             dst = destination;
         }
     }
-    private String clientaddr, domain, host, uri;
-    private int bytes = 0;
-    private HashMap<String, SDNode> nodes = new HashMap<String, SDNode>();
-    private ArrayList<SDEdge> edges = new ArrayList<SDEdge>();
-
-    public SnarfData(String xsrcaddr, String xuri, String xmethod, String xhost, String xreferer) {
-        setClient(xsrcaddr);
-        setHost(xhost);
-        setUri(xuri);
-        setReferer(xreferer);
-        String method = xmethod;
-        //explodeUri(nodes.get("uri"));
-        //explodeUri(nodes.get("referer"));
-
-        for (String n : new String[]{"referer", "rhost", "rdomain", "host", "domain", "client"}) {
-            nodes.get(n).attributes.put("content-type", "");
-        }
-
-        addEdge("rdomain", "rhost");
-        addEdge("rhost", "referer");
-        addEdge("referer", "uri");
-        addEdge("client", "uri");
-        addEdge("host", "uri");
-        addEdge("domain", "host");
-    }
 
     private void setClient(String rawaddr) {
         clientaddr = rawaddr.replaceFirst("[^\\d]+(\\d+\\.\\d+\\.\\d+\\.\\d+).*", "$1");
-        nodes.put("client", new SDNode("client", "local", clientaddr, clientaddr, true, 8f));
+        nodes.put("client", new SDNode("client", "local", clientaddr, clientaddr, net.phreakocious.httpgraph.HttpGraph.INSTANCE.isClientLabelVisible(), 8f));
     }
 
     private void setUri(String rawuri) {
@@ -93,7 +93,7 @@ public class SnarfData {
             return;
         }
         uri = parseUri(rawuri);
-        nodes.put("uri", new SDNode("uri", domain, uri, uri, false, 3f));
+        nodes.put("uri", new SDNode("resource", domain, uri, uri, net.phreakocious.httpgraph.HttpGraph.INSTANCE.isResourceLabelVisible(), 3f));
     }
 
     private void explodeUri(SDNode node) {
@@ -136,9 +136,9 @@ public class SnarfData {
             rdomain = parseDomain(rhost);
         }
 
-        nodes.put("referer", new SDNode("uri", rdomain, referer, referer, false, 3f));
-        nodes.put("rhost", new SDNode("host", rdomain, rhost, rhost, true, 4f));
-        nodes.put("rdomain", new SDNode("domain", rdomain, rdomain, rdomain, true, 6f));
+        nodes.put("referer", new SDNode("resource", rdomain, referer, referer, net.phreakocious.httpgraph.HttpGraph.INSTANCE.isResourceLabelVisible(), 3f));
+        nodes.put("rhost", new SDNode("host", rdomain, rhost, rhost, net.phreakocious.httpgraph.HttpGraph.INSTANCE.isHostLabelVisible(), 4f));
+        nodes.put("rdomain", new SDNode("domain", rdomain, rdomain, rdomain, net.phreakocious.httpgraph.HttpGraph.INSTANCE.isDomainLabelVisible(), 6f));
 
     }
 
@@ -153,8 +153,8 @@ public class SnarfData {
         host = host.replaceFirst(":.*$", "");
         domain = parseDomain(host);
 
-        nodes.put("host", new SDNode("host", domain, host, host, true, 4f));
-        nodes.put("domain", new SDNode("domain", domain, domain, domain, true, 6f));
+        nodes.put("host", new SDNode("host", domain, host, host, net.phreakocious.httpgraph.HttpGraph.INSTANCE.isHostLabelVisible(), 4f));
+        nodes.put("domain", new SDNode("domain", domain, domain, domain, net.phreakocious.httpgraph.HttpGraph.INSTANCE.isDomainLabelVisible(), 6f));
     }
 
     private String parseDomain(String domain) {
@@ -260,4 +260,5 @@ public class SnarfData {
         log.log(Level.INFO, "vars:  rhost {0}", nodes.get("rhost").label);
         log.log(Level.INFO, "vars:  rdomain {0}", nodes.get("rdomain").label);
     }
+
 }

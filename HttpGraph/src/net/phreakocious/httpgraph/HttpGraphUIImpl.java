@@ -42,10 +42,16 @@ public class HttpGraphUIImpl implements HttpGraphUI {
     public void unsetup() {
         //Set params
         httpGraph.setProxyPort(Integer.parseInt(panel.portField.getText()));
+        httpGraph.setAutoLayout(panel.startLayout.isSelected());
+        httpGraph.setClientLabelVisible(panel.clientLabels.isSelected());
+        httpGraph.setDomainLabelVisible(panel.domainLabels.isSelected());
+        httpGraph.setHostLabelVisible(panel.hostLabels.isSelected());
+        httpGraph.setResourceLabelVisible(panel.resourceLabels.isSelected());
         if (panel.chainProxyEnabled.isSelected()) {
             httpGraph.setChainProxy(String.valueOf(panel.chainProxy.getText()));
             httpGraph.setChainProxyPort(Integer.parseInt(panel.chainProxyPort.getText()));
         }
+        
         panel = null;
     }
 }

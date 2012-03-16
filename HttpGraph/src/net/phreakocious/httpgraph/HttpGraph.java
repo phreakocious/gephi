@@ -1,15 +1,17 @@
 package net.phreakocious.httpgraph;
 
-import com.predic8.membrane.core.Configuration;
 import com.predic8.membrane.core.HttpRouter;
-import com.predic8.membrane.core.config.Proxy;
+import com.predic8.membrane.core.config.ProxyConfiguration;
 import com.predic8.membrane.core.rules.ProxyRule;
 import com.predic8.membrane.core.rules.ProxyRuleKey;
 import java.awt.Color;
 import java.util.ArrayList;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.xml.datatype.DatatypeConfigurationException;
+import javax.xml.datatype.DatatypeFactory;
 import net.phreakocious.httpgraph.SnarfData.SDEdge;
 import net.phreakocious.httpgraph.SnarfData.SDNode;
 import net.phreakocious.httpgraph.layout.HGForceAtlas;
@@ -18,20 +20,16 @@ import org.gephi.data.attributes.api.AttributeOrigin;
 import org.gephi.data.attributes.api.AttributeTable;
 import org.gephi.data.attributes.api.AttributeType;
 import org.gephi.desktop.project.api.ProjectControllerUI;
+import org.gephi.dynamic.api.DynamicModel;
 import org.gephi.io.generator.spi.Generator;
 import org.gephi.io.generator.spi.GeneratorUI;
-import org.gephi.io.importer.api.Container;
-import org.gephi.io.importer.api.ContainerFactory;
-import org.gephi.io.importer.api.ContainerLoader;
-//import org.gephi.io.importer.api.EdgeDefault;
-import org.gephi.io.importer.api.EdgeDraft;
-import org.gephi.io.importer.api.ImportController;
-import org.gephi.io.importer.api.NodeDraft;
+import org.gephi.io.importer.api.*;
 import org.gephi.layout.api.LayoutController;
 import org.gephi.layout.spi.LayoutBuilder;
 import org.gephi.project.api.ProjectController;
 import org.gephi.project.api.Workspace;
 import org.gephi.utils.progress.ProgressTicket;
+import org.gephi.visualization.VizController;
 import org.openide.util.Lookup;
 import org.openide.util.lookup.ServiceProvider;
 
@@ -51,11 +49,14 @@ public class HttpGraph implements Generator {
     private static ArrayList<Color> colors;
     private static HashMap<String, Color> colormap;
     private static HashMap<String, AttributeType> attribmap;
+    private static DatatypeFactory dateFactory;
     protected ProgressTicket progress;
     protected boolean cancel = false;
     protected int proxyport = 8088;
     protected String chainproxy = "";
     protected int chainproxyport = 0;
+    protected boolean autoLayout = true;
+    private boolean clientLabelVisible, domainLabelVisible, hostLabelVisible, resourceLabelVisible;
 
     static {
         INSTANCE = new HttpGraph();
@@ -65,7 +66,10 @@ public class HttpGraph implements Generator {
         router = new HttpRouter();
         colormap = new HashMap<String, Color>();
         attribmap = new HashMap<String, AttributeType>();
-
+        try {
+            dateFactory = DatatypeFactory.newInstance();
+        } catch (DatatypeConfigurationException ex) {
+        }
         setAttributeMap();
         generateColors(colordiv);
     }
@@ -76,12 +80,12 @@ public class HttpGraph implements Generator {
         container.setAllowSelfLoop(true);
         container.setSource("Snarfing your world wide web!");
         ContainerLoader cldr = container.getLoader();
+        cldr.setTimeFormat(DynamicModel.TimeFormat.DATETIME);
         return cldr;
     }
 
     public void graphupdate(SnarfData data) {
         Container container = Lookup.getDefault().lookup(ContainerFactory.class).newContainer();
-//        container.getLoader().setEdgeDefault(EdgeDefault.DIRECTED);
         ContainerLoader cldr = hgContainerLoader(container);
 
         AttributeTable nodeTable = cldr.getAttributeModel().getNodeTable();
@@ -94,6 +98,7 @@ public class HttpGraph implements Generator {
         }
 
         NodeDraft nd, nd1, nd2;
+        String datetime = dateFactory.newXMLGregorianCalendar(new GregorianCalendar()).toXMLFormat();
 
         for (SDNode n : data.getNodes()) {
 
@@ -112,6 +117,7 @@ public class HttpGraph implements Generator {
                 cldr.addNode(nd);
                 nd.setLabel(n.label);
                 nd.setColor(colormap.get(domain));
+                nd.addTimeInterval(datetime, null);
 
                 for (String attrib : n.attributes.keySet()) {
                     Object value = n.attributes.get(attrib);
@@ -139,33 +145,33 @@ public class HttpGraph implements Generator {
                 ed.setTarget(nd2);
                 ed.setId(el);
                 ed.setType(EdgeDraft.EdgeType.DIRECTED);
+                ed.addTimeInterval(datetime, null);
                 cldr.addEdge(ed);
             }
         }
 
         importController.process(container, new HGAppendProcessor(), workspace);
+
     }
 
     @Override
     public void generate(ContainerLoader c) {
-        
+
         if (Lookup.getDefault().lookup(ProjectController.class).getCurrentProject() == null) {
             Lookup.getDefault().lookup(ProjectControllerUI.class).newProject();
         }
-        c = null;
+        c = null;                                                                       // We are going to replace the ContainerLoader provided by the Generator
 
+        VizController.getInstance().getTextManager().getModel().setShowNodeLabels(true);
+        
         try {
             if (!chainproxy.isEmpty()) {
 
-                Proxy proxy = new Proxy(router);
+                ProxyConfiguration proxy = new ProxyConfiguration(router);
                 proxy.setProxyHost(chainproxy);
                 proxy.setProxyPort(chainproxyport);
                 proxy.setUseProxy(true);
-                
-                Configuration config = new Configuration();
-                config.setProxy(proxy);
 
-                router.getConfigurationManager().setConfiguration(config);
                 router.getConfigurationManager().setSecuritySystemProperties();
             }
 
@@ -176,10 +182,12 @@ public class HttpGraph implements Generator {
             log.log(Level.SEVERE, ex.getMessage());
         }
 
-        LayoutBuilder lb = Lookup.getDefault().lookup(HGForceAtlas.class);
-        LayoutController lc = Lookup.getDefault().lookup(LayoutController.class);
-        lc.setLayout(lb.buildLayout());
-        lc.executeLayout();
+        if (autoLayout) {
+            LayoutBuilder lb = Lookup.getDefault().lookup(HGForceAtlas.class);
+            LayoutController lc = Lookup.getDefault().lookup(LayoutController.class);
+            lc.setLayout(lb.buildLayout());
+            lc.executeLayout();
+        }
         progress.start();
     }
 
@@ -233,6 +241,46 @@ public class HttpGraph implements Generator {
 
     public void setChainProxyPort(int port) {
         this.chainproxyport = port;
+    }
+
+    public boolean getAutoLayout() {
+        return autoLayout;
+    }
+
+    public void setAutoLayout(boolean dolayout) {
+        this.autoLayout = dolayout;
+    }
+
+    public boolean isClientLabelVisible() {
+        return clientLabelVisible;
+    }
+
+    public void setClientLabelVisible(boolean clientLabelVisible) {
+        this.clientLabelVisible = clientLabelVisible;
+    }
+
+    public boolean isDomainLabelVisible() {
+        return domainLabelVisible;
+    }
+
+    public void setDomainLabelVisible(boolean domainLabelVisible) {
+        this.domainLabelVisible = domainLabelVisible;
+    }
+
+    public boolean isHostLabelVisible() {
+        return hostLabelVisible;
+    }
+
+    public void setHostLabelVisible(boolean hostLabelVisible) {
+        this.hostLabelVisible = hostLabelVisible;
+    }
+
+    public boolean isResourceLabelVisible() {
+        return resourceLabelVisible;
+    }
+
+    public void setResourceLabelVisible(boolean resourceLabelVisible) {
+        this.resourceLabelVisible = resourceLabelVisible;
     }
 
     @Override
